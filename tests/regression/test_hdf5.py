@@ -11,10 +11,13 @@ except ImportError:
     h5py = None
 
 _h5file = os.path.join(os.curdir, "test_hdf5.h5")
+_xmffile = os.path.join(os.curdir, "test_hdf5.xmf")
 
 
 @pytest.fixture
 def filepath():
+    if os.path.exists(_xmffile):
+        os.remove(_xmffile)
     if os.path.exists(_h5file):
         os.remove(_h5file)
     return _h5file
@@ -47,3 +50,15 @@ def test_hdf5_vector(mesh, filepath):
     yval = h5out['fields']['Coordinates'][:, 1]
     y = mesh.coordinates.dat.data[:, 1]
     assert np.max(np.abs(yval - y)) < 1e-6
+
+
+@pytest.mark.skipif("h5py is None", reason='h5py not available')
+def test_hdf5_xdmf_header(mesh, filepath):
+    fs = FunctionSpace(mesh, "CG", 1)
+    x = Function(fs, name='xcoord')
+    x.interpolate(Expression("x[0]"))
+
+    h5file = File(filepath)
+    h5file << x
+    del h5file  # Close output file
+    assert os.path.exists(_xmffile)
