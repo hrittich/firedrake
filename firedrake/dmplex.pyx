@@ -660,20 +660,26 @@ def reordered_coords(PETSc.DM plex, PETSc.Section global_numbering, shape):
     """Return coordinates for the plex, reordered according to the
     global numbering permutation for the coordinate function space.
 
-    Shape is a tuple of (plex.numVertices(), geometric_dim)."""
+    Shape is a tuple of (ndof, geometric_dim)."""
     cdef:
-        PetscInt v, vStart, vEnd, offset
-        PetscInt i, dim = shape[1]
+        PetscInt p, pStart, pEnd, offset, ndof
+        PetscInt i, j, dim = shape[1], count
         np.ndarray[np.float64_t, ndim=2] plex_coords, coords
 
     plex_coords = plex.getCoordinatesLocal().array.reshape(shape)
     coords = np.empty_like(plex_coords)
-    vStart, vEnd = plex.getDepthStratum(0)
+    pStart, pEnd = plex.getChart()
 
-    for v in range(vStart, vEnd):
-        CHKERR(PetscSectionGetOffset(global_numbering.sec, v, &offset))
-        for i in range(dim):
-            coords[offset, i] = plex_coords[v - vStart, i]
+    count = 0
+    for p in range(pStart, pEnd):
+        CHKERR(PetscSectionGetDof(global_numbering.sec, p, &ndof))
+        if ndof <= 0:
+            continue
+        CHKERR(PetscSectionGetOffset(global_numbering.sec, p, &offset))
+        for j in range(ndof):
+            for i in range(dim):
+                coords[offset + j, i] = plex_coords[count, i]
+            count += 1
 
     return coords
 

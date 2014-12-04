@@ -386,7 +386,8 @@ class MeshBase(object):
                     raise NotImplementedError("Periodic coordinates in more than 1D are unsupported")
                 # We've been passed a periodic coordinate field, so use that.
                 self._coordinate_fs = functionspace.VectorFunctionSpace(self, "DG", 1)
-                coordinates = self._plex.getCoordinatesLocal().array
+                coordinates = dmplex.reordered_coords(self._plex, self._coordinate_fs._global_numbering,
+                                                      (2*self.num_cells(), geometric_dim))
                 self.coordinates = function.Function(self._coordinate_fs,
                                                      val=coordinates,
                                                      name="Coordinates")
