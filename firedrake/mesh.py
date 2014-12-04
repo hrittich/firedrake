@@ -164,7 +164,7 @@ def Mesh(meshfile, **kwargs):
 
     dim = kwargs.get("dim", None)
     reorder = kwargs.get("reorder", parameters["reorder_meshes"])
-    periodic_coords = kwargs.get("periodic_coords", None)
+    periodic_coords = kwargs.get("periodic_coords", False)
 
     if isinstance(meshfile, PETSc.DMPlex):
         name = "plexmesh"
@@ -173,7 +173,7 @@ def Mesh(meshfile, **kwargs):
         name = meshfile
         basename, ext = os.path.splitext(meshfile)
 
-        if periodic_coords is not None:
+        if periodic_coords:
             raise RuntimeError("Periodic coordinates are unsupported when reading from file")
         if ext.lower() in ['.e', '.exo']:
             plex = _from_exodus(meshfile)
@@ -324,7 +324,7 @@ class MeshBase(object):
     """A representation of mesh topology and geometry."""
 
     def __init__(self, name, plex, geometric_dim,
-                 reorder, periodic_coords=None):
+                 reorder, periodic_coords=False):
         """ Create mesh from DMPlex object """
 
         # A cache of function spaces that have been built on this mesh
@@ -381,13 +381,14 @@ class MeshBase(object):
 
         # Note that for bendy elements, this needs to change.
         with timed_region("Mesh: coordinate field"):
-            if periodic_coords is not None:
+            if periodic_coords:
                 if self.ufl_cell().geometric_dimension() != 1:
                     raise NotImplementedError("Periodic coordinates in more than 1D are unsupported")
                 # We've been passed a periodic coordinate field, so use that.
                 self._coordinate_fs = functionspace.VectorFunctionSpace(self, "DG", 1)
+                coordinates = self._plex.getCoordinatesLocal().array
                 self.coordinates = function.Function(self._coordinate_fs,
-                                                     val=periodic_coords,
+                                                     val=coordinates,
                                                      name="Coordinates")
             else:
                 self._coordinate_fs = functionspace.VectorFunctionSpace(self, "Lagrange", 1)
