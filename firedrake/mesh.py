@@ -232,6 +232,14 @@ def _from_triangle(filename, dim):
     return plex
 
 
+def _from_hdf5(self, filename, dim=0, reorder=None):
+    """Load DMPlex object from HDF5 checkpoint"""
+    h5viewer = PETSc.Viewer().createHDF5(filename, mode='r')
+    plex = PETSc.DMPlex().create()
+    plex.load(h5viewer)
+    return plex
+
+
 class Mesh(object):
     """A representation of mesh topology and geometry."""
 
@@ -301,6 +309,8 @@ class Mesh(object):
                 plex = _from_gmsh(meshfile)
             elif ext.lower() == '.node':
                 plex = _from_triangle(meshfile, geometric_dim)
+            elif ext.lower() == '.h5':
+                plex = _from_hdf5(meshfile, geometric_dim)
             else:
                 raise RuntimeError("Mesh file %s has unknown format '%s'."
                                    % (meshfile, ext[1:]))
